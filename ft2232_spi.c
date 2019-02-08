@@ -174,7 +174,20 @@ static int ft2232_spi_shutdown(void *data)
 	struct ftdi_context *ftdic = &ftdic_context;
 	unsigned char buf[512];
 
-	msg_pdbg("Set CBUS bits\n");
+
+	msg_pinfo("Set CBUS Reset\n");
+	buf[0] = SET_BITS_HIGH;
+	buf[1] = 0x40; // enable high
+	buf[2] = 0x40; // enable input
+	if (send_buf(ftdic, buf, 3)) {
+		ret = -8;
+		msg_perr("Unable to reset CBUS on FTDI device\n");
+	}
+
+	// wait for signals to come online
+	programmer_delay(10 * 1000);
+
+	msg_pinfo("Set CBUS Release \n");
 	buf[0] = SET_BITS_HIGH;
 	buf[1] = 0x00; // enable high
 	buf[2] = 0x00; // enable input
@@ -432,6 +445,31 @@ int ft2232_spi_init(void)
 		goto ftdi_err;
 	}
 
+
+	msg_pinfo("Set CBUS Reset & OE\n");
+	buf[0] = SET_BITS_HIGH;
+	buf[1] = 0x64; // enable high
+	buf[2] = 0x64; // enable output
+	if (send_buf(ftdic, buf, 3)) {
+		ret = -8;
+		goto ftdi_err;
+	}
+
+	// wait for signals to come online
+	programmer_delay(10 * 1000);
+
+	msg_pinfo("Set CBUS Boot Mode & OE\n");
+	buf[0] = SET_BITS_HIGH;
+	buf[1] = 0x24; // enable high
+	buf[2] = 0x64; // enable output
+	if (send_buf(ftdic, buf, 3)) {
+		ret = -8;
+		goto ftdi_err;
+	}
+
+	// wait for signals to come online
+	programmer_delay(100 * 1000);
+
 	msg_pdbg("Set data bits\n");
 	buf[0] = SET_BITS_LOW;
 	buf[1] = cs_bits;
@@ -441,14 +479,7 @@ int ft2232_spi_init(void)
 		goto ftdi_err;
 	}
 
-	msg_pdbg("Set CBUS bits\n");
-	buf[0] = SET_BITS_HIGH;
-	buf[1] = 0x60; // enable high
-	buf[2] = 0x60; // enable output
-	if (send_buf(ftdic, buf, 3)) {
-		ret = -8;
-		goto ftdi_err;
-	}
+
 
 	register_spi_master(&spi_master_ft2232);
 
