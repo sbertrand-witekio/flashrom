@@ -168,6 +168,25 @@ static const struct spi_master spi_master_ft2232 = {
 	.write_aai	= default_spi_write_aai,
 };
 
+static int ft2232_spi_shutdown(void *data)
+{
+	int ret = 0;
+	struct ftdi_context *ftdic = &ftdic_context;
+	unsigned char buf[512];
+
+	msg_pdbg("Set CBUS bits\n");
+	buf[0] = SET_BITS_HIGH;
+	buf[1] = 0x00; // enable high
+	buf[2] = 0x00; // enable input
+	if (send_buf(ftdic, buf, 3)) {
+		ret = -8;
+		msg_perr("Unable to reset CBUS on FTDI device\n");
+	}
+
+	return ret;
+}
+
+
 /* Returns 0 upon success, a negative number upon errors. */
 int ft2232_spi_init(void)
 {
@@ -361,6 +380,10 @@ int ft2232_spi_init(void)
 		clock_5x = 0;
 	}
 
+
+	if (register_shutdown(ft2232_spi_shutdown, NULL))
+		return 1;
+
 	if (ftdi_usb_reset(ftdic) < 0) {
 		msg_perr("Unable to reset FTDI device (%s).\n", ftdi_get_error_string(ftdic));
 	}
@@ -413,6 +436,15 @@ int ft2232_spi_init(void)
 	buf[0] = SET_BITS_LOW;
 	buf[1] = cs_bits;
 	buf[2] = pindir;
+	if (send_buf(ftdic, buf, 3)) {
+		ret = -8;
+		goto ftdi_err;
+	}
+
+	msg_pdbg("Set CBUS bits\n");
+	buf[0] = SET_BITS_HIGH;
+	buf[1] = 0x60; // enable high
+	buf[2] = 0x60; // enable output
 	if (send_buf(ftdic, buf, 3)) {
 		ret = -8;
 		goto ftdi_err;
