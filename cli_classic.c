@@ -104,17 +104,18 @@ int main(int argc, char *argv[])
 #if CONFIG_PRINT_WIKI == 1
 	int list_supported_wiki = 0;
 #endif
-	int read_it = 0, write_it = 0, erase_it = 0, verify_it = 0;
+	int read_it = 0, write_it = 0, erase_it = 0,erase_it_whole = 0, verify_it = 0;
 	int dont_verify_it = 0, dont_verify_all = 0, list_supported = 0, operation_specified = 0;
 	struct flashrom_layout *layout = NULL;
 	enum programmer prog = PROGRAMMER_INVALID;
 	int ret = 0;
 
-	static const char optstring[] = "r:Rw:v:nNVEfc:l:i:p:Lzho:";
+	static const char optstring[] = "r:Rw:v:nNVEWfc:l:i:p:Lzho:";
 	static const struct option long_options[] = {
 		{"read",		1, NULL, 'r'},
 		{"write",		1, NULL, 'w'},
 		{"erase",		0, NULL, 'E'},
+		{"erase chip",	0, NULL, 'W'},
 		{"verify",		1, NULL, 'v'},
 		{"noverify",		0, NULL, 'n'},
 		{"noverify-all",	0, NULL, 'N'},
@@ -213,6 +214,14 @@ int main(int argc, char *argv[])
 				cli_classic_abort_usage();
 			}
 			erase_it = 1;
+			break;
+		case 'W' :
+			if (++operation_specified > 1) {
+				fprintf(stderr, "More than one operation "
+					"specified. Aborting.\n");
+				cli_classic_abort_usage();
+			}
+			erase_it_whole = 1;
 			break;
 		case 'f':
 			force = 1;
@@ -538,8 +547,13 @@ int main(int argc, char *argv[])
 		goto out_shutdown;
 	}
 
-	if (!(read_it | write_it | verify_it | erase_it)) {
+	if (!(read_it | write_it | verify_it | erase_it | erase_it_whole)) {
 		msg_ginfo("No operations were specified.\n");
+		goto out_shutdown;
+	}
+
+	if( erase_it_whole && ( layout || ifd ) ) {
+		msg_gerr("Whole Chip Erase cannot use a layout.\n");
 		goto out_shutdown;
 	}
 
@@ -568,6 +582,8 @@ int main(int argc, char *argv[])
 		ret = do_read(fill_flash, filename);
 	else if (erase_it)
 		ret = do_erase(fill_flash);
+	else if (erase_it_whole)
+		ret = do_erase_chip(fill_flash);
 	else if (write_it)
 		ret = do_write(fill_flash, filename);
 	else if (verify_it)

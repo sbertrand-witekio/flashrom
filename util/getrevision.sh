@@ -133,7 +133,7 @@ timestamp() {
 revision() {
 	local r
 	if git_is_file_tracked "$1" ; then
-		r=$(git describe $(git_last_commit "$1"))
+		r=$(git describe --tags $(git_last_commit "$1"))
 		if git_has_local_changes "$1" ; then
 			r="$r-dirty"
 		fi

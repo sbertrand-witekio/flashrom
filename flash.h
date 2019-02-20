@@ -231,7 +231,7 @@ struct flashrom_flashctx {
 
 /* Timing used in probe routines. ZERO is -2 to differentiate between an unset
  * field and zero delay.
- * 
+ *
  * SPI devices will always have zero delay and ignore this field.
  */
 #define TIMING_FIXME	-1
@@ -293,6 +293,7 @@ int prepare_flash_access(struct flashctx *, bool read_it, bool write_it, bool er
 void finalize_flash_access(struct flashctx *);
 int do_read(struct flashctx *, const char *filename);
 int do_erase(struct flashctx *);
+int do_erase_chip(struct flashctx *const flash);
 int do_write(struct flashctx *, const char *const filename);
 int do_verify(struct flashctx *, const char *const filename);
 

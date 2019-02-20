@@ -621,7 +621,7 @@ char *extract_param(const char *const *haystack, const char *needle, const char 
 			return NULL;
 		/* Needle followed by '='? */
 		if (param_pos[needlelen] == '=') {
-			
+
 			/* Beginning of the string? */
 			if (param_pos == *haystack)
 				break;
@@ -1696,6 +1696,9 @@ static int erase_block(struct flashctx *const flashctx,
 	msg_cdbg("E");
 	if (erasefn(flashctx, info->erase_start, erase_len))
 		return 1;
+
+	msg_cdbg("-");
+
 	if (check_erased_range(flashctx, info->erase_start, erase_len)) {
 		msg_cerr("ERASE FAILED!\n");
 		return 1;
@@ -2257,6 +2260,47 @@ int flashrom_flash_erase(struct flashctx *const flashctx)
 	return ret;
 }
 
+
+/**
+ * @brief Erase the whole specified ROM chip.
+ *
+ * @param flashctx The context of the flash chip to erase.
+ * @return 0 on success.
+ */
+int flashrom_whole_flash_erase(struct flashctx *const flashctx)
+{
+	if (prepare_flash_access(flashctx, false, false, true, false))
+		return 1;
+
+	int ret = 1;
+	const unsigned int chip_size = flashctx->chip->total_size * 1024;
+	struct walk_info info = { 0 };
+
+	info.region_start = 0;
+	info.region_end = chip_size;
+
+	for( int e=0;e<NUM_ERASEFUNCTIONS;e++)
+	{
+		struct block_eraser eraser = flashctx->chip->block_erasers[e];
+
+		msg_pinfo("\t %d - Considering Eraser : %d %d\n",e,eraser.eraseblocks[0].size,eraser.eraseblocks[0].count);
+
+		if(eraser.block_erase && eraser.eraseblocks[0].size == chip_size && eraser.eraseblocks[0].count == 1)
+		{
+			// suitable Eraser
+			ret = walk_eraseblocks(flashctx, &info, e, &erase_block);
+			if (ret == 0)
+				break;
+		}
+	}
+	if(ret)
+		msg_perr("Whole Chip Erase Failed\n");
+
+	finalize_flash_access(flashctx);
+
+	return ret;
+}
+
 /** @} */ /* end flashrom-flash */
 
 /**
@@ -2512,6 +2556,23 @@ int do_read(struct flashctx *const flash, const char *const filename)
 int do_erase(struct flashctx *const flash)
 {
 	const int ret = flashrom_flash_erase(flash);
+
+	/*
+	 * FIXME: Do we really want the scary warning if erase failed?
+	 * After all, after erase the chip is either blank or partially
+	 * blank or it has the old contents. A blank chip won't boot,
+	 * so if the user wanted erase and reboots afterwards, the user
+	 * knows very well that booting won't work.
+	 */
+	if (ret)
+		emergency_help_message();
+
+	return ret;
+}
+
+int do_erase_chip(struct flashctx *const flash)
+{
+	const int ret = flashrom_whole_flash_erase(flash);
 
 	/*
 	 * FIXME: Do we really want the scary warning if erase failed?
