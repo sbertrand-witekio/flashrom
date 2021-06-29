@@ -737,3 +737,19 @@ int spi_prettyprint_status_register_sst25vf040b(struct flashctx *flash)
 	msg_cdbg("Resulting block protection : %s\n", bpt[(status & 0x1c) >> 2]);
 	return 0;
 }
+
+/* === ISSI IS25 === */
+
+int spi_prettyprint_status_register_is25(struct flashctx *flash)
+{
+	uint8_t status = spi_read_status_register(flash);
+	spi_prettyprint_status_register_hex(status);
+
+	spi_prettyprint_status_register_srwd(status);
+	msg_cdbg("Chip status register: Quad Enable (EQ) is %sset\n",
+		 (status & (1 << 6)) ? "" : "not ");
+	spi_prettyprint_status_register_bp(status, 3);
+	spi_prettyprint_status_register_welwip(status);
+
+	return 0;
+}
