@@ -104,6 +104,8 @@ int spi_prettyprint_status_register_sst25(struct flashctx *flash);
 int spi_prettyprint_status_register_sst25vf016(struct flashctx *flash);
 int spi_prettyprint_status_register_sst25vf040b(struct flashctx *flash);
 int spi_prettyprint_status_register_is25(struct flashctx *flash);
+int spi_prettyprint_status_register_is25_qe(struct flashctx *flash);
+int spi_prettyprint_status_register_is25_qd(struct flashctx *flash);
 int spi_disable_blockprotect_sst26_global_unprotect(struct flashctx *flash);
 
 /* sfdp.c */

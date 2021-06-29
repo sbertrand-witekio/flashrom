@@ -740,9 +740,8 @@ int spi_prettyprint_status_register_sst25vf040b(struct flashctx *flash)
 
 /* === ISSI IS25 === */
 
-int spi_prettyprint_status_register_is25(struct flashctx *flash)
+static int spi_prettyprint_status_register_is25_common(uint8_t status)
 {
-	uint8_t status = spi_read_status_register(flash);
 	spi_prettyprint_status_register_hex(status);
 
 	spi_prettyprint_status_register_srwd(status);
@@ -750,6 +749,52 @@ int spi_prettyprint_status_register_is25(struct flashctx *flash)
 		 (status & (1 << 6)) ? "" : "not ");
 	spi_prettyprint_status_register_bp(status, 3);
 	spi_prettyprint_status_register_welwip(status);
+
+	return 0;
+}
+
+int spi_prettyprint_status_register_is25(struct flashctx *flash)
+{
+	uint8_t status = spi_read_status_register(flash);
+	spi_prettyprint_status_register_is25_common(status);
+
+	return 0;
+}
+
+int spi_prettyprint_status_register_is25_qe(struct flashctx *flash)
+{
+	uint8_t status = spi_read_status_register(flash);
+	spi_prettyprint_status_register_is25_common(status);
+
+	if (!(status & (1 << 6)))
+	{
+		msg_cdbg("Enabling QE\n");
+		status|=(1 << 6);
+		spi_write_status_register(flash,status);
+
+		status = spi_read_status_register(flash);
+		msg_cdbg("Chip status register: Quad Enable (EQ) is %sset\n",
+			 (status & (1 << 6)) ? "" : "not ");
+	}
+
+	return 0;
+}
+
+int spi_prettyprint_status_register_is25_qd(struct flashctx *flash)
+{
+	uint8_t status = spi_read_status_register(flash);
+	spi_prettyprint_status_register_is25_common(status);
+
+	if ((status & (1 << 6)))
+	{
+		msg_cdbg("Disabling QE\n");
+		status&=~(1 << 6);
+		spi_write_status_register(flash,status);
+
+		status = spi_read_status_register(flash);
+		msg_cdbg("Chip status register: Quad Enable (EQ) is %sset\n",
+			 (status & (1 << 6)) ? "" : "not ");
+	}
 
 	return 0;
 }
